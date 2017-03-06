@@ -55,8 +55,8 @@ def n_fold_cross_val(TrainMat, FeatMat, EndPoints):
 def analytical_cross_val(Z, Y):
 	BestLambda = 0
 	BestValError = 1000000
-	MinLambda = 0.0
-	MaxLambda = 3000.0
+	MinLambda = 0 
+	MaxLambda = 10000 
 	Steps = 100
 	StepSize = (MaxLambda - MinLambda)/Steps
 	for Lambda in numpy.arange(MinLambda+StepSize, MaxLambda+StepSize, StepSize):

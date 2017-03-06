@@ -16,31 +16,6 @@ def q3a(TrainMat, TestMat):
 	MovieError =  learning.square_error_a(MoviePredictor, TestMat, 1, 2)
 	UserError =  learning.square_error_a(UserPredictor, TestMat, 0, 2)
 
-#def q3b(TrainMat, TestMat, FeatMat):
-#	SortedTrain = data_ops.sort_col(TrainMat, 0)
-#	EndPoints = data_ops.extract_endpoints(SortedTrain, 0)
-#	Start = 0
-#	Count = 0
-#	U = numpy.zeros((FeatMat.shape[1], 1))
-#	
-#	for End in EndPoints: 
-#		Tmp = TrainMat[Start:End+1, 1:3]
-#		Start = End+1
-#		Z = numpy.zeros((1,FeatMat.shape[1]))
-#		#Y = data_ops.normalise(Tmp[:,1])
-#		Y = numpy.array([Tmp[:,1]])
-#		Y = Y.T	
-#		for Index in Tmp[:,0]:
-#			Z = numpy.append(Z, [FeatMat[int(Index-1),:]], axis=0)
-#		Z = numpy.delete(Z, (0), axis=0)
-#		#Z = data_ops.normalise(Z)
-#		Ui = learning.ridge_regression(Z, Y, 3.15)
-#		U = numpy.append(U, Ui, axis=1)
-#	U = numpy.delete(U, (0), axis=1)
-#
-#	Err = learning.square_error_b(FeatMat, U, TestMat)
-#	print Err
-		
 def q3b(TrainMat, TestMat, FeatMat):
 	SortedTrain = data_ops.sort_col(TrainMat, 0)
 	EndPoints = data_ops.extract_endpoints(SortedTrain, 0)
@@ -56,7 +31,6 @@ def q3b(TrainMat, TestMat, FeatMat):
 		Tmp = TrainMat[Start:End+1, 1:3]
 		Start = End+1
 		Z = numpy.zeros((1,FeatMat.shape[1]))
-		#Y = data_ops.normalise(Tmp[:,1])
 		Y = numpy.array([Tmp[:,1]])
 		Y = Y.T	
 		#center Y
