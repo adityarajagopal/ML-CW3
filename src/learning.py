@@ -55,13 +55,17 @@ def n_fold_cross_val(TrainMat, FeatMat, EndPoints):
 def analytical_cross_val(Z, Y):
 	BestLambda = 0
 	BestValError = 1000000
-
-	for Lambda in numpy.arange(1,121,6):
+	MinLambda = 0.0
+	MaxLambda = 3000.0
+	Steps = 100
+	StepSize = (MaxLambda - MinLambda)/Steps
+	for Lambda in numpy.arange(MinLambda+StepSize, MaxLambda+StepSize, StepSize):
 		H = H_cal(Z, Lambda)
+		Hnn = numpy.array([numpy.diag(H)]).T
 		Y_hat = numpy.dot(H, Y)
 		N = Z.shape[0]
 		Tmp1 = Y_hat - Y
-		Tmp2 = 1 - H
+		Tmp2 = 1 - Hnn
 		Tmp3 = numpy.square(Tmp1 / Tmp2)
 		Tmp4 = numpy.sum(Tmp3)
 		ValError = Tmp4 / N
