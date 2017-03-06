@@ -28,7 +28,7 @@ def ridge_regression(Z, Y, Lambda):
 	Tmp2 = numpy.dot(Tmp1, Zt)
 	return numpy.dot(Tmp2, Y)
 
-def n_fold_cross_val(TrainMat, FeatMat, EndPoints):
+def cross_val_lambda(TrainMat, FeatMat, EndPoints):
 	LambdaUserMat = numpy.zeros((1,1))
 	LambdaList = []
 	Start = 0
@@ -46,29 +46,20 @@ def n_fold_cross_val(TrainMat, FeatMat, EndPoints):
 		Z = numpy.delete(Z, (0), axis=0)
 		Z = preprocessing.scale(Z)
 		
-		#(BestLambda, BestValError) = empirical_cross_val(Z, Y)
-		BestLambda = analytical_cross_val(Z,Y)
+		BestLambda = analytical_lambda_cross_val(Z,Y)
 		LambdaUserMat = numpy.append(LambdaUserMat, [[BestLambda]], axis=0)
 	LambdaUserMat = numpy.delete(LambdaUserMat, (0), axis=0)
 	return LambdaUserMat
 
-def analytical_cross_val(Z, Y):
+def analytical_lambda_cross_val(Z, Y):
 	BestLambda = 0
 	BestValError = 1000000
-	MinLambda = 0 
-	MaxLambda = 10000 
-	Steps = 100
+	MinLambda = 0.0 
+	MaxLambda = 10000.0
+	Steps = 10
 	StepSize = (MaxLambda - MinLambda)/Steps
 	for Lambda in numpy.arange(MinLambda+StepSize, MaxLambda+StepSize, StepSize):
-		H = H_cal(Z, Lambda)
-		Hnn = numpy.array([numpy.diag(H)]).T
-		Y_hat = numpy.dot(H, Y)
-		N = Z.shape[0]
-		Tmp1 = Y_hat - Y
-		Tmp2 = 1 - Hnn
-		Tmp3 = numpy.square(Tmp1 / Tmp2)
-		Tmp4 = numpy.sum(Tmp3)
-		ValError = Tmp4 / N
+		ValError = cv_error(Z, Y, Lambda)
 		if ValError < BestValError:
 			BestValError = ValError 
 			BestLambda = Lambda
@@ -84,6 +75,17 @@ def H_cal(Z, Lambda):
 	Tmp2 = numpy.dot(Tmp1, Zt)
 	return numpy.dot(Z, Tmp2)
 
+def cv_error(Z, Y, Lambda):
+	H = H_cal(Z, Lambda)
+	Hnn = numpy.array([numpy.diag(H)]).T
+	Y_hat = numpy.dot(H, Y)
+	N = Z.shape[0]
+	Tmp1 = Y_hat - Y
+	Tmp2 = 1 - Hnn
+	Tmp3 = numpy.square(Tmp1 / Tmp2)
+	Tmp4 = numpy.sum(Tmp3)
+	return (Tmp4 / N)
+	
 
 def empirical_cross_val(Z, Y):
 	BestValError = 1000000
@@ -106,7 +108,66 @@ def empirical_cross_val(Z, Y):
 			BestLambda = Lambda
 	
 	return (BestLambda, BestValError)
+
+def cross_val_legendre(TrainMat, FeatMat, EndPoints, LowDeg, Degree):
+	CVErrMat = numpy.zeros((Degree-(LowDeg-1), len(EndPoints)))
+	LambdaMat = numpy.zeros((len(EndPoints), 1))
 	
+	for Deg in xrange(LowDeg, Degree+1):
+		ZLeg = data_ops.legendre(FeatMat, Deg)
+		LUMat = cross_val_lambda(TrainMat, ZLeg, EndPoints)
+		LambdaMat = numpy.append(LambdaMat, LUMat, axis=1)
+		
+		Start = 0
+		User = 0
+		for End in EndPoints:
+			Tmp = TrainMat[Start:End+1, 1:3]
+			Start = End+1
+			Z = numpy.zeros((1,ZLeg.shape[1]))
+			Y = numpy.array([Tmp[:,1]])
+			Y = Y.T	
+			Y = Y - numpy.mean(Y, axis=0)
+
+			for Index in Tmp[:,0]:
+				Z = numpy.append(Z, [ZLeg[int(Index-1),:]], axis=0)
+			Z = numpy.delete(Z, (0), axis=0)
+			Z = preprocessing.scale(Z)
+
+			CrossValErr = cv_error(Z, Y, LUMat[User])
+			CVErrMat[Deg-LowDeg, User] = CrossValErr
+			User += 1
+	LambdaMat = numpy.delete(LambdaMat, (0), axis=1)	
+	return (CVErrMat, LambdaMat)
+
+def learn(EndPoints, TrainMat, FeatMat, LUMat):
+	Start = 0
+	Index1 = 0
+	U = numpy.zeros((FeatMat.shape[1], 1))
+	MeanMat = numpy.zeros((1,1))
+	
+	for End in EndPoints: 
+		Tmp = TrainMat[Start:End+1, 1:3]
+		Start = End+1
+		Z = numpy.zeros((1,FeatMat.shape[1]))
+		Y = numpy.array([Tmp[:,1]])
+		Y = Y.T	
+		#center Y
+		Mean = numpy.mean(Y, axis=0)
+		MeanMat = numpy.append(MeanMat, [Mean], axis=1)
+		Y = Y - Mean 
+		
+		for Index in Tmp[:,0]:
+			Z = numpy.append(Z, [FeatMat[int(Index-1),:]], axis=0)
+		Z = numpy.delete(Z, (0), axis=0)
+		Z = preprocessing.scale(Z)	
+
+		Ui = ridge_regression(Z, Y, LUMat[Index1])
+		U = numpy.append(U, Ui, axis=1)
+		Index1 += 1
+	U = numpy.delete(U, (0), axis=1)
+	MeanMat = numpy.delete(MeanMat, (0), axis=1)
+
+	return (U, MeanMat)
 
 
 	

@@ -1,5 +1,7 @@
 import csv
 import numpy
+import scipy
+from sklearn import decomposition
 
 numpy.set_printoptions(threshold = numpy.nan)
 def reader(File):
@@ -59,8 +61,18 @@ def normalise(Matrix):
 	ColSd = numpy.std(Matrix, axis=0)
 	return (Matrix - ColMeans)/ColSd
 
+def pca(FeatMat, NumFeats):
+	PCA = decomposition.PCA(n_components = NumFeats)
+	Z = PCA.fit_transform(FeatMat)
+	return Z
 
-
+def legendre(FeatMat, Degree):	
+	Z = numpy.zeros((FeatMat.shape[0], 1))
+	for Deg in xrange(0, Degree+1):
+		L = numpy.polyval(scipy.special.legendre(Deg), FeatMat)
+		Z = numpy.append(Z, L, axis=1)
+	Z = numpy.delete(Z, (0), axis=1)
+	return Z
 
 
 		
