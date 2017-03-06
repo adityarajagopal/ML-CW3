@@ -59,11 +59,6 @@ def normalise(Matrix):
 	ColSd = numpy.std(Matrix, axis=0)
 	return (Matrix - ColMeans)/ColSd
 
-def denormalise(Matrix):
-	ColMeans = numpy.mean(Matrix, axis=0)
-	ColSd = numpy.std(Matrix, axis=0)
-	return (Matrix * ColSd) + ColMeans
-
 
 
 

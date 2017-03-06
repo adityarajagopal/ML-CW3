@@ -2,6 +2,7 @@ import data_ops
 import learning
 import time
 import numpy
+from sklearn import preprocessing
 
 
 def q3a(TrainMat, TestMat):
@@ -44,8 +45,9 @@ def q3b(TrainMat, TestMat, FeatMat):
 	SortedTrain = data_ops.sort_col(TrainMat, 0)
 	EndPoints = data_ops.extract_endpoints(SortedTrain, 0)
 	Start = 0
-	Index = 0
+	Index1 = 0
 	U = numpy.zeros((FeatMat.shape[1], 1))
+	MeanMat = numpy.zeros((1,1))
 
 	LUMat = learning.n_fold_cross_val(TrainMat, FeatMat, EndPoints)
 	print LUMat
@@ -57,17 +59,26 @@ def q3b(TrainMat, TestMat, FeatMat):
 		#Y = data_ops.normalise(Tmp[:,1])
 		Y = numpy.array([Tmp[:,1]])
 		Y = Y.T	
+		#center Y
+		Mean = numpy.mean(Y, axis=0)
+		MeanMat = numpy.append(MeanMat, [Mean], axis=1)
+		Y = Y - Mean 
+		
 		for Index in Tmp[:,0]:
 			Z = numpy.append(Z, [FeatMat[int(Index-1),:]], axis=0)
 		Z = numpy.delete(Z, (0), axis=0)
-		#Z = data_ops.normalise(Z)
-		Ui = learning.ridge_regression(Z, Y, LUMat[index])
-		U = numpy.append(U, Ui, axis=1)
-		Index += 1
-	U = numpy.delete(U, (0), axis=1)
+		Z = preprocessing.scale(Z)	
 
-	Err = learning.square_error_b(FeatMat, U, TestMat)
-	print Err
+		Ui = learning.ridge_regression(Z, Y, LUMat[Index1])
+		U = numpy.append(U, Ui, axis=1)
+		Index1 += 1
+	U = numpy.delete(U, (0), axis=1)
+	MeanMat = numpy.delete(MeanMat, (0), axis=1)
+
+	Err_Test = learning.square_error_b(FeatMat, U, TestMat, MeanMat)
+	Err_Train = learning.square_error_b(FeatMat, U, TrainMat, MeanMat)
+	print Err_Test
+	print Err_Train
 
 def main():
 	TrainingData = '../movie-data/ratings-train.csv'
