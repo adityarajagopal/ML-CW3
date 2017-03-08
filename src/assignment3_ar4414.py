@@ -34,23 +34,41 @@ def q3c(TrainMat, TestMat, FeatureMat):
 	EndPoints = data_ops.extract_endpoints(SortedTrain, 0)
 
 	#Legendre transformation
-	Low = 2
-	High = 4
-	(CVErr, LambdaMat) = learning.cross_val_legendre(TrainMat, FeatureMat, EndPoints, Low, High)
-	BestModelPerUser = numpy.argmin(CVErr, axis=0)
-	BestModel = numpy.bincount(BestModelPerUser).argmax()
-	
-	Z = data_ops.legendre(FeatureMat, BestModel+Low)
-	print BestModel + Low
-	(U, MeanMat) = learning.learn(EndPoints, TrainMat, Z, LambdaMat[:,BestModel])
+	#Low = 2
+	#High = 4
+	#(CVErr, LambdaMat) = learning.cross_val_legendre(TrainMat, FeatureMat, EndPoints, Low, High)
+	#BestModelPerUser = numpy.argmin(CVErr, axis=0)
+	#BestModel = numpy.bincount(BestModelPerUser).argmax()
+	#
+	#Z = data_ops.legendre(FeatureMat, BestModel+Low)
+	#print BestModel + Low
+	#(U, MeanMat) = learning.learn(EndPoints, TrainMat, Z, LambdaMat[:,BestModel])
 
-	Err_Test = learning.square_error_b(Z, U, TestMat, MeanMat)
-	Err_Train = learning.square_error_b(Z, U, TrainMat, MeanMat)
-	print Err_Test
-	print Err_Train
+	#Err_Test = learning.square_error_b(Z, U, TestMat, MeanMat)
+	#Err_Train = learning.square_error_b(Z, U, TrainMat, MeanMat)
+	#print Err_Test
+	#print Err_Train
 	
 	#PCA transformation
-	#Z = data_ops.pca(FeatureMat, 5)
+	Z = data_ops.pca(FeatureMat, 3)
+	(CVErr, LambdaMat) = learning.cross_val_poly(TrainMat, Z, EndPoints, 1, 4)
+	BestModelPerUser = numpy.argmin(CVErr, axis=0)
+	BestModel = numpy.bincount(BestModelPerUser).argmax()
+	print BestModel + 1
+	Poly = preprocessing.PolynomialFeatures(BestModel+1)
+	Z = Poly.fit_transform(Z)
+	(U, MeanMat) = learning.learn(EndPoints, TrainMat, Z, LambdaMat)
+	print learning.square_error_b(Z, U, TrainMat, MeanMat)
+	print learning.square_error_b(Z, U, TestMat, MeanMat)
+
+def q3d(TrainMat, TestMat, NumMovies):
+	(BestLambda, Err) = learning.ten_fold_cross_val(TrainMat, [0.1,0.01,0.001,0.0001], 0.1, 4, 100, NumMovies, 1000)			
+	print BestLambda
+	(X, Theta) = learning.collaborative_filter(TrainMat, 4, BestLambda, 0.1, 100, NumMovies) 
+	Ratings = numpy.dot(Theta.T, X)
+	print learning.square_error_collab(Ratings, TrainMat)	
+	print learning.square_error_collab(Ratings, TestMat)	
+			
 
 def main():
 	TrainingData = '../movie-data/ratings-train.csv'
@@ -66,6 +84,7 @@ def main():
 	#q3a(TrainMat, TestMat)
 	#q3b(TrainMat, TestMat, FeatureMat)
 	q3c(TrainMat, TestMat, FeatureMat)
+	#q3d(TrainMat, TestMat, FeatureMat.shape[0])
 
 
 if __name__ == '__main__':

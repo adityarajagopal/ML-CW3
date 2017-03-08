@@ -1,6 +1,7 @@
 import numpy
 import math
 import data_ops
+import random
 from sklearn import preprocessing
 
 def square_error_a(TrainMatrix, TestMatrix, DataCol, RatingCol):
@@ -17,6 +18,11 @@ def square_error_b(FeatMat, U, TestMat, MeanMat):
 	SqError = numpy.square(AbsError)
 	CumSqError = numpy.sum(SqError)
 	return CumSqError/TestMat.shape[0]
+
+def square_error_collab(Ratings, TestMat):
+	SqErr = [numpy.square(Row[2] - Ratings[int(Row[0]-1), int(Row[1]-1)]) for Row in TestMat]
+	return numpy.sum(SqErr) / TestMat.shape[0]		
+		
 	
 def ridge_regression(Z, Y, Lambda):
 	Zt = numpy.transpose(Z, (1,0))
@@ -86,35 +92,44 @@ def cv_error(Z, Y, Lambda):
 	Tmp4 = numpy.sum(Tmp3)
 	return (Tmp4 / N)
 	
-
-def empirical_cross_val(Z, Y):
-	BestValError = 1000000
-	BestLambda = 0
-	
-	for Lambda in numpy.arange(0.05,10.05,0.05):
-		TotalValError = 0
-		
-		for Index in xrange(0,Z.shape[0]):
-			Z_train = numpy.delete(Z, (Index), axis=0)
-			Y_train = numpy.delete(Y, (Index), axis=0)
-			Ui = ridge_regression(Z_train, Y_train, Lambda)
-			#get validation error 
-			ZVal = numpy.array([Z[Index,:]])
-			RVal = numpy.dot(ZVal, Ui)
-			TotalValError += numpy.square(RVal - Y[Index,:])
-		ValError = TotalValError / Z.shape[0]
-		if ValError < BestValError : 
-			BestValError = ValError
-			BestLambda = Lambda
-	
-	return (BestLambda, BestValError)
-
 def cross_val_legendre(TrainMat, FeatMat, EndPoints, LowDeg, Degree):
 	CVErrMat = numpy.zeros((Degree-(LowDeg-1), len(EndPoints)))
 	LambdaMat = numpy.zeros((len(EndPoints), 1))
 	
 	for Deg in xrange(LowDeg, Degree+1):
 		ZLeg = data_ops.legendre(FeatMat, Deg)
+		LUMat = cross_val_lambda(TrainMat, ZLeg, EndPoints)
+		LambdaMat = numpy.append(LambdaMat, LUMat, axis=1)
+		
+		Start = 0
+		User = 0
+		for End in EndPoints:
+			Tmp = TrainMat[Start:End+1, 1:3]
+			Start = End+1
+			Z = numpy.zeros((1,ZLeg.shape[1]))
+			Y = numpy.array([Tmp[:,1]])
+			Y = Y.T	
+			Y = Y - numpy.mean(Y, axis=0)
+
+			for Index in Tmp[:,0]:
+				Z = numpy.append(Z, [ZLeg[int(Index-1),:]], axis=0)
+			Z = numpy.delete(Z, (0), axis=0)
+			Z = preprocessing.scale(Z)
+
+			CrossValErr = cv_error(Z, Y, LUMat[User])
+			CVErrMat[Deg-LowDeg, User] = CrossValErr
+			User += 1
+	LambdaMat = numpy.delete(LambdaMat, (0), axis=1)	
+	return (CVErrMat, LambdaMat)
+
+def cross_val_poly(TrainMat, FeatMat, EndPoints, LowDeg, Degree):
+	CVErrMat = numpy.zeros((Degree-(LowDeg-1), len(EndPoints)))
+	LambdaMat = numpy.zeros((len(EndPoints), 1))
+	
+	for Deg in xrange(LowDeg, Degree+1):
+		Poly = preprocessing.PolynomialFeatures(Deg)
+		ZLeg = Poly.fit_transform(FeatMat) 
+		print ZLeg.shape
 		LUMat = cross_val_lambda(TrainMat, ZLeg, EndPoints)
 		LambdaMat = numpy.append(LambdaMat, LUMat, axis=1)
 		
@@ -169,20 +184,79 @@ def learn(EndPoints, TrainMat, FeatMat, LUMat):
 
 	return (U, MeanMat)
 
+def collaborative_filter(TrainMat, K, Lambda, Alpha, Iter, NumMovies):
+	SortedUsers = data_ops.sort_col(TrainMat, 0)
+	UserEndPoints = data_ops.extract_endpoints(SortedUsers, 0)
+	NumUsers = len(UserEndPoints)
+	UserEndPoints = [-1] + UserEndPoints
 
+	SortedMovies = data_ops.sort_col(TrainMat, 1)
+	MovieEndPoints = data_ops.extract_endpoints(SortedMovies, 1)
+	MovieEndPoints = [-1] + MovieEndPoints
+
+	X = numpy.random.rand(K, NumMovies)
+	Theta = numpy.random.rand(K, NumUsers)
+
+	return stoch_grad_descent(Theta, X, Iter, Alpha, Lambda, SortedUsers, SortedMovies, UserEndPoints, MovieEndPoints)
+
+def stoch_grad_descent(Theta, X, Iterations, Alpha, Lambda, SortedUser, SortedMovie, UserEndPoints, MovieEndPoints):
+	XNew = X
+	for i in xrange(0, Iterations+1): 
+		ThetaNew = numpy.zeros((Theta.shape[0],1))
+		# update X's
+		for Movie in xrange(1, len(MovieEndPoints)):
+			DataPoint = random.randint(MovieEndPoints[Movie-1]+1, MovieEndPoints[Movie])
+			RandomUser = SortedMovie[DataPoint,0]
+			CurrMov = SortedMovie[DataPoint,1]
+			ThetaJ = Theta[:,int(RandomUser-1)]
+			Xi = X[:,int(CurrMov-1)]
+			Yj = SortedMovie[DataPoint,2]
+			AbsErr = numpy.dot(ThetaJ.T, Xi) - Yj
+			Grad = AbsErr*ThetaJ + Lambda*Xi
+			Tmp = numpy.array([Xi - Alpha*Grad])
+			XNew[:,int(CurrMov-1)] = Tmp.T[:,0]
+
+		#update Theta's
+		for User in xrange(1, Theta.shape[1]+1):
+			DataPoint = random.randint(UserEndPoints[User-1]+1, UserEndPoints[User])
+			RandomMovie = SortedUser[DataPoint,1]
+			ThetaJ = Theta[:,int(User-1)]
+			Xi = X[:,int(RandomMovie-1)]
+			Yi = SortedUser[DataPoint,2]
+			AbsErr = numpy.dot(ThetaJ.T, Xi) - Yi
+			Grad = AbsErr*Xi + Lambda*ThetaJ
+			Tmp = numpy.array([ThetaJ - Alpha*Grad])
+			ThetaNew = numpy.append(ThetaNew, Tmp.T, axis=1)
+		ThetaNew = numpy.delete(ThetaNew, (0), axis=1)
+
+		X = XNew
+		Theta = ThetaNew
+
+	return (X, Theta)
 	
 
-
-
+def ten_fold_cross_val(TrainMat, LambdaList, Alpha, K, Iter, NumMovies, Fold):
+	BestValError = 1000000
+	BestLambda = 0
+	
+	for Lambda in LambdaList:
+		print Lambda
+		TotalValError = 0
 		
-			
-
-
-
-
-
-
-
+		for Index in xrange(0,TrainMat.shape[0],Fold):
+			TrainSet = TrainMat
+			for Row in xrange(Index, Index+Fold):
+				TrainSet = numpy.delete(TrainSet, (Index), axis=0)
+			TestSet = TrainMat[Index:Index+Fold,:]
+			(X, Theta) = collaborative_filter(TrainSet, K, Lambda, Alpha, Iter, NumMovies)
+			TotalValError = square_error_collab(numpy.dot(Theta.T, X), TestSet)
+		
+		ValError = TotalValError / int(TrainMat.shape[0]/Fold)
+		if ValError < BestValError : 
+			BestValError = ValError
+			BestLambda = Lambda
+	
+	return (BestLambda, BestValError)
 
 
 

@@ -1,5 +1,6 @@
 import csv
 import numpy
+import random
 import scipy
 from sklearn import decomposition
 
@@ -45,7 +46,7 @@ def append_zero_rows(Start, End, Matrix):
 	return Matrix
 
 def extract_endpoints(Matrix, Col):
-	PrevElem = 1
+	PrevElem = Matrix[0,Col]
 	Count = 0
 	EndPoints = []
 	for Elem in Matrix[:,Col]:
@@ -73,8 +74,13 @@ def legendre(FeatMat, Degree):
 		Z = numpy.append(Z, L, axis=1)
 	Z = numpy.delete(Z, (0), axis=1)
 	return Z
-
-
-		
 		
 	
+
+
+
+
+
+
+
+
