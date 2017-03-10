@@ -128,7 +128,7 @@ def cross_val_poly(TrainMat, FeatMat, EndPoints, LowDeg, Degree):
 	LambdaMat = numpy.zeros((len(EndPoints), 1))
 	
 	for Deg in xrange(LowDeg, Degree+1):
-		Poly = preprocessing.PolynomialFeatures(Deg, interaction_only=True)
+		Poly = preprocessing.PolynomialFeatures(Deg, interaction_only=False)
 		ZLeg = Poly.fit_transform(FeatMat) 
 		print ZLeg.shape
 		LUMat = cross_val_lambda(TrainMat, ZLeg, EndPoints)
@@ -355,7 +355,7 @@ def n_fold_cross_val(TrainMat, LambdaList, Alpha, KList, Iter, NumMovies, Fold, 
 	BestK = 1
 	BestLambda = 1
 
-	K = 15
+	K = 8
 	for Lambda in LambdaList:
 		print "CurrLambda: ", Lambda
 		TotalValError = 0

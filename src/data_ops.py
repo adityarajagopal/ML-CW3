@@ -69,7 +69,7 @@ def pca(FeatMat, NumFeats):
 
 def legendre(FeatMat, Degree):	
 	Z = numpy.zeros((FeatMat.shape[0], 1))
-	for Deg in xrange(0, Degree+1):
+	for Deg in xrange(1, Degree+1):
 		L = numpy.polyval(scipy.special.legendre(Deg), FeatMat)
 		Z = numpy.append(Z, L, axis=1)
 	Z = numpy.delete(Z, (0), axis=1)

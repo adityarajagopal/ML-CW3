@@ -37,41 +37,45 @@ def q3c(TrainMat, TestMat, FeatureMat):
 	EndPoints = data_ops.extract_endpoints(SortedTrain, 0)
 
 	#Legendre transformation
-	Low = 2
-	High = 4
-	(CVErr, LambdaMat) = learning.cross_val_legendre(TrainMat, FeatureMat, EndPoints, Low, High)
-	BestModelPerUser = numpy.argmin(CVErr, axis=0)
-	BestModel = numpy.bincount(BestModelPerUser).argmax()
-	
-	Z = data_ops.legendre(FeatureMat, BestModel+Low)
-	print "Legendre best degree: ", BestModel + Low
-	(U, MeanMat) = learning.learn(EndPoints, TrainMat, Z, LambdaMat[:,BestModel])
+	#Low = 2
+	#High = 4
+	#(CVErr, LambdaMat) = learning.cross_val_legendre(TrainMat, FeatureMat, EndPoints, Low, High)
+	#BestModelPerUser = numpy.argmin(CVErr, axis=0)
+	#BestModel = numpy.bincount(BestModelPerUser).argmax()
+	#
+	#Z = data_ops.legendre(FeatureMat, BestModel+Low)
+	#print Z.shape
+	#print "Legendre best degree: ", BestModel + Low
+	#(U, MeanMat) = learning.learn(EndPoints, TrainMat, Z, LambdaMat[:,BestModel])
 
-	Err_Test = learning.square_error_b(Z, U, TestMat, MeanMat)
-	Err_Train = learning.square_error_b(Z, U, TrainMat, MeanMat)
-	print "Legendre Test Error: ", Err_Test
-	print "Legendre Training Error: ", Err_Train
+	#Err_Test = learning.square_error_b(Z, U, TestMat, MeanMat)
+	#Err_Train = learning.square_error_b(Z, U, TrainMat, MeanMat)
+	#print "Legendre Test Error: ", Err_Test
+	#print "Legendre Training Error: ", Err_Train
 	
 	#PCA transformation
 	Low = 2
 	High = 4
 	Z = data_ops.pca(FeatureMat, 3)
-	(CVErr, LambdaMat) = learning.cross_val_poly(TrainMat, Z, EndPoints, Low, High)
-	BestModelPerUser = numpy.argmin(CVErr, axis=0)
-	BestModel = numpy.bincount(BestModelPerUser).argmax()
-	print "PCA + Poly best degree: ", BestModel + Low
-	Poly = preprocessing.PolynomialFeatures(BestModel+1)
-	Z = Poly.fit_transform(Z)
+	LambdaMat = learning.cross_val_lambda(TrainMat, Z, EndPoints)
 	(U, MeanMat) = learning.learn(EndPoints, TrainMat, Z, LambdaMat)
 	print "PCA + Poly Training Error: ", learning.square_error_b(Z, U, TrainMat, MeanMat)
 	print "PCA + Poly Test Error: ", learning.square_error_b(Z, U, TestMat, MeanMat)
 
+	
+	#(CVErr, LambdaMat) = learning.cross_val_poly(TrainMat, Z, EndPoints, Low, High)
+	#BestModelPerUser = numpy.argmin(CVErr, axis=0)
+	#BestModel = numpy.bincount(BestModelPerUser).argmax()
+	#print "PCA + Poly best degree: ", BestModel + Low
+	#Poly = preprocessing.PolynomialFeatures(BestModel+1)
+	#Z = Poly.fit_transform(Z)
+	#(U, MeanMat) = learning.learn(EndPoints, TrainMat, Z, LambdaMat)
+	#print "PCA + Poly Training Error: ", learning.square_error_b(Z, U, TrainMat, MeanMat)
+	#print "PCA + Poly Test Error: ", learning.square_error_b(Z, U, TestMat, MeanMat)
+
 def q3d(TrainMat, TestMat, NumMovies):
-	#BestLambda, BestK = learning.n_fold_cross_val(TrainMat, [0.001,0.0001,0.005,0.1,1], 0.001, [10,12,14,16], 1000000, NumMovies, 3889, TestMat)			
-	#BestLambda, BestK = learning.n_fold_nested_cross_val(TrainMat, [0.001,0.05], 0.001, [10,14], 1000000, NumMovies, 3889, TestMat)			
-	#print (BestLambda, BestK)
-	BestK = 14
-	BestLambda = 0.1
+	BestLambda, BestK = learning.n_fold_cross_val(TrainMat, [0.005,0.01,0.05,0.1,1], 0.001, [4,7,10], 1000000, NumMovies, 3889, TestMat)			
+	print (BestLambda, BestK)
 	Iter = 50000000
 	Alpha = 0.0001
 	(X, Theta, IterList, TestErr, TrainErr) = learning.collaborative_filter(TrainMat, BestK, BestLambda, Alpha, Iter, NumMovies, TestMat, True, 0) 
@@ -103,8 +107,8 @@ def main():
 
 	#q3a(TrainMat, TestMat)
 	#q3b(TrainMat, TestMat, FeatureMat)
-	#q3c(TrainMat, TestMat, FeatureMat)
-	q3d(TrainMat, TestMat, FeatureMat.shape[0])
+	q3c(TrainMat, TestMat, FeatureMat)
+	#q3d(TrainMat, TestMat, FeatureMat.shape[0])
 
 
 if __name__ == '__main__':
